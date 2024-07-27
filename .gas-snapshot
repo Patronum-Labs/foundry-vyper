@@ -1,0 +1,2 @@
+GreetingTest:test_getGreeting() (gas: 13801)
+GreetingTest:test_setGreeting() (gas: 20868)

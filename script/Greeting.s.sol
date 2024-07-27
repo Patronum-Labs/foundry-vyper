@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import "forge-std/Script.sol";
-import {VyperDeployer} from "../lib/utils/VyperDeployer.sol";
-import {IGreeting} from "../interfaces/IGreeting.sol";
+import {Script} from "forge-std/Script.sol";
 
 ///@notice This cheat codes interface is named _CheatCodes so you can use the CheatCodes interface in other testing files without errors
+// solhint-disable-next-line contract-name-camelcase
 interface _CheatCodes {
     function ffi(string[] calldata) external returns (bytes memory);
 }
 
 contract GreetingScript is Script {
-    address constant HEVM_ADDRESS =
+    address public constant HEVM_ADDRESS =
         address(bytes20(uint160(uint256(keccak256("hevm cheat code")))));
 
     /// @notice Initializes cheat codes in order to use ffi to compile Vyper contracts
-    _CheatCodes cheatCodes = _CheatCodes(HEVM_ADDRESS);
+    _CheatCodes public cheatCodes = _CheatCodes(HEVM_ADDRESS);
 
     string public constant INITIAL_GREETING = "yoSnakes";
     function run() external {
@@ -36,11 +35,13 @@ contract GreetingScript is Script {
 
         ///@notice deploy the bytecode with the create instruction
         address deployedAddress;
+        // solhint-disable-next-line no-inline-assembly
         assembly {
             deployedAddress := create(0, add(bytecode, 0x20), mload(bytecode))
         }
 
         ///@notice check that the deployment was successful
+        // solhint-disable-next-line gas-custom-errors
         require(deployedAddress != address(0), "Could not deploy contract");
 
         vm.stopBroadcast();

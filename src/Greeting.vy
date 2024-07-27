@@ -8,7 +8,7 @@
 
 greeting: public(String[100])
 
-@external
+@deploy
 def __init__(_greeting: String[100]):
     """
     @notice Initializes the contract with a greeting

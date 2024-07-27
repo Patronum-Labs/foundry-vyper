@@ -1,0 +1,37 @@
+name: "Bug Report"
+description: File a bug report
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - attributes:
+      value: |
+        Please check the [issues tab](https://github.com/Patronum-Labs/foundry-vyper/issues) to avoid duplicates.
+        Thanks for taking the time to fill out this bug report!
+    type: markdown
+  - attributes:
+      label: "Describe the issue:"
+    id: what-happen
+    type: textarea
+    validations:
+      required: true
+  - attributes:
+      label: "Expected behavior:"
+    id: expected-behavior
+    type: textarea
+    validations:
+      required: true
+  - attributes:
+      label: "Environment"
+      description: "Compiler version, Foundry version, Vyper version, Operating System"
+    id: environment
+    type: textarea
+    validations:
+      required: true
+  - attributes:
+      label: "Code example to reproduce the issue:"
+      description: "It can be a GitHub repository/gist or a simple code snippet."
+    id: reproduce
+    type: textarea
+    validations:
+      required: true

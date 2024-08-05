@@ -1,131 +1,314 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity >=0.8.13;
+// SPDX-License-Identifier: WTFPL
+pragma solidity ^0.8.15;
 
-///@notice This cheat codes interface is named _CheatCodes so you can use the CheatCodes interface in other testing files without errors
+// Vyper deployer used by snekmate contracts
+// https://github.com/pcaversaccio/snekmate/blob/4cb87bff4c1ca8901d9931772b1e58758bea6576/lib/utils/VyperDeployer.sol
+
+import {Create} from "create-util/Create.sol";
+import {console, StdStyle} from "forge-std/Test.sol";
+
+/**
+ * @dev Error that occurs when compiling a contract has failed.
+ * @param emitter The contract that emits the error.
+ */
+error CompilationFailed(address emitter);
+
+/**
+ * @dev Error that occurs when deploying a contract has failed.
+ * @param emitter The contract that emits the error.
+ */
+error DeploymentFailed(address emitter);
+
+/**
+ * @dev The interface of this cheat code is called `_CheatCodes`,
+ * so you can use the `CheatCodes` interface (see here:
+ * https://book.getfoundry.sh/cheatcodes/?highlight=CheatCodes#cheatcode-types)
+ * in other test files without errors.
+ */
+// solhint-disable-next-line contract-name-camelcase
 interface _CheatCodes {
     function ffi(string[] calldata) external returns (bytes memory);
 }
 
-contract VyperDeployer {
-    address constant HEVM_ADDRESS =
-        address(bytes20(uint160(uint256(keccak256("hevm cheat code")))));
+/**
+ * @title Vyper Contract Deployer
+ * @author pcaversaccio
+ * @notice Forked and adjusted accordingly from here:
+ * https://github.com/0xKitsune/Foundry-Vyper/blob/main/lib/utils/VyperDeployer.sol.
+ * @dev The Vyper Contract Deployer is a pre-built contract containing functions that
+ * use a path, a filename, any ABI-encoded constructor arguments, and optionally the
+ * target EVM version and the compiler optimisation mode, and deploy the corresponding
+ * Vyper contract, returning the address that the bytecode was deployed to.
+ */
+contract VyperDeployer is Create {
+    address private constant HEVM_ADDRESS =
+        address(uint160(uint256(keccak256("hevm cheat code"))));
+    address private self = address(this);
 
-    /// @notice Initializes cheat codes in order to use ffi to compile Vyper contracts
-    _CheatCodes cheatCodes = _CheatCodes(HEVM_ADDRESS);
+    /**
+     * @dev Initialises `cheatCodes` in order to use the foreign function interface (ffi)
+     * to compile the Vyper contracts.
+     */
+    _CheatCodes private cheatCodes = _CheatCodes(HEVM_ADDRESS);
 
-    ///@notice Compiles a Vyper contract and returns the address that the contract was deployeod to
-    ///@notice If deployment fails, an error will be thrown
-    ///@param fileName - The file name of the Vyper contract. For example, the file name for "SimpleStore.vy" is "SimpleStore"
-    ///@return deployedAddress - The address that the contract was deployed to
-
-    function deployContract(string memory fileName) public returns (address) {
-        ///@notice create a list of strings with the commands necessary to compile Vyper contracts
-        string[] memory cmds = new string[](2);
-        cmds[0] = "vyper";
-        cmds[1] = string.concat("src/", fileName, ".vy");
-
-        ///@notice compile the Vyper contract and return the bytecode
-        bytes memory bytecode = cheatCodes.ffi(cmds);
-
-        ///@notice deploy the bytecode with the create instruction
-        address deployedAddress;
-        assembly {
-            deployedAddress := create(0, add(bytecode, 0x20), mload(bytecode))
-        }
-
-        ///@notice check that the deployment was successful
-        require(
-            deployedAddress != address(0),
-            "VyperDeployer could not deploy contract"
-        );
-
-        ///@notice return the address that the contract was deployed to
-        return deployedAddress;
-    }
-
-    ///@notice Compiles a Vyper contract with constructor arguments and returns the address that the contract was deployeod to
-    ///@notice If deployment fails, an error will be thrown
-    ///@param fileName - The file name of the Vyper contract. For example, the file name for "SimpleStore.vy" is "SimpleStore"
-    ///@return deployedAddress - The address that the contract was deployed to
+    /**
+     * @dev Compiles a Vyper contract and returns the address that the contract
+     * was deployed to. If the deployment fails, an error is thrown.
+     * @param path The directory path of the Vyper contract.
+     * For example, the path of "utils" is "src/utils/".
+     * @param fileName The file name of the Vyper contract.
+     * For example, the file name for "ECDSA.vy" is "ECDSA".
+     * @return deployedAddress The address that the contract was deployed to.
+     */
     function deployContract(
-        string memory fileName,
-        bytes calldata args
-    ) public returns (address) {
-        ///@notice create a list of strings with the commands necessary to compile Vyper contracts
-        string[] memory cmds = new string[](2);
-        cmds[0] = "vyper";
-        cmds[1] = string.concat("src/", fileName, ".vy");
+        string calldata path,
+        string calldata fileName
+    ) public returns (address deployedAddress) {
+        /**
+         * @dev Create a list of strings with the commands necessary
+         * to compile Vyper contracts.
+         */
+        string[] memory cmds = new string[](3);
+        cmds[0] = "python3";
+        cmds[1] = "lib/utils/compile.py";
+        cmds[2] = string.concat(path, fileName, ".vy");
 
-        ///@notice compile the Vyper contract and return the bytecode
-        bytes memory _bytecode = cheatCodes.ffi(cmds);
-
-        //add args to the deployment bytecode
-        bytes memory bytecode = abi.encodePacked(_bytecode, args);
-
-        ///@notice deploy the bytecode with the create instruction
-        address deployedAddress;
-        assembly {
-            deployedAddress := create(0, add(bytecode, 0x20), mload(bytecode))
-        }
-
-        ///@notice check that the deployment was successful
-        require(
-            deployedAddress != address(0),
-            "VyperDeployer could not deploy contract"
-        );
-
-        ///@notice return the address that the contract was deployed to
-        return deployedAddress;
-    }
-
-    /// @dev Consider listening to the Blueprint if you haven't already
-    /// @param fileName - The file name of the Blueprint Contract
-    function deployBlueprint(string memory fileName) public returns (address) {
-        ///@notice create a list of strings with the commands necessary to compile Vyper contracts
-        string[] memory cmds = new string[](2);
-        cmds[0] = "vyper";
-        cmds[1] = string.concat("src/", fileName, ".vy");
-
-        ///@notice compile the Vyper contract and return the bytecode
+        /**
+         * @dev Compile the Vyper contract and return the bytecode.
+         */
         bytes memory bytecode = cheatCodes.ffi(cmds);
 
-        require(bytecode.length > 0, "Initcodes length must be greater than 0");
-
-        /// @notice prepend needed items for Blueprint ERC
-        /// See https://eips.ethereum.org/EIPS/eip-5202 for more details
-        bytes memory eip_5202_bytecode = bytes.concat(
-            hex"fe", // EIP_5202_EXECUTION_HALT_BYTE
-            hex"71", // EIP_5202_BLUEPRINT_IDENTIFIER_BYTE
-            hex"00", // EIP_5202_VERSION_BYTE
-            bytecode
-        );
-
-        bytes2 len = bytes2(uint16(eip_5202_bytecode.length));
-
-        /// @notice prepend the deploy preamble
-        bytes memory deployBytecode = bytes.concat(
-            hex"61", // DEPLOY_PREAMBLE_INITIAL_BYTE
-            len, // DEPLOY_PREAMBLE_BYTE_LENGTH
-            hex"3d81600a3d39f3", // DEPLOY_PREABLE_POST_LENGTH_BYTES
-            eip_5202_bytecode
-        );
-
-        ///@notice check that the deployment was successful
-        address deployedAddress;
-        assembly {
-            deployedAddress := create(
-                0,
-                add(deployBytecode, 0x20),
-                mload(deployBytecode)
-            )
+        /**
+         * @dev Revert if the Vyper compilation failed or is a zero-length
+         * contract creation bytecode.
+         */
+        if (bytecode.length == 0) {
+            // solhint-disable-next-line no-console
+            console.log(
+                StdStyle.red(
+                    "Vyper compilation failed! Please ensure that you have a valid Vyper version installed."
+                )
+            );
+            revert CompilationFailed({emitter: self});
         }
 
-        require(
-            deployedAddress != address(0),
-            "VyperDeployer could not deploy contract"
-        );
+        /**
+         * @dev Deploy the bytecode with the `CREATE` instruction.
+         */
+        deployedAddress = deploy({amount: 0, bytecode: bytecode});
 
-        ///@notice return the address that the contract was deployed to
-        return deployedAddress;
+        /**
+         * @dev Check that the deployment was successful.
+         */
+        if (deployedAddress == address(0))
+            revert DeploymentFailed({emitter: self});
+    }
+
+    /**
+     * @dev Compiles a Vyper contract with constructor arguments and returns the
+     * address that the contract was deployed to. If the deployment fails, an error
+     * is thrown.
+     * @notice Function overload of `deployContract` that allows any ABI-encoded
+     * constructor arguments to be passed.
+     * @param path The directory path of the Vyper contract.
+     * For example, the path of "utils" is "src/utils/".
+     * @param fileName The file name of the Vyper contract.
+     * For example, the file name for "ECDSA.vy" is "ECDSA".
+     * @param args The ABI-encoded constructor arguments.
+     * @return deployedAddress The address that the contract was deployed to.
+     */
+    function deployContract(
+        string calldata path,
+        string calldata fileName,
+        bytes calldata args
+    ) public returns (address deployedAddress) {
+        /**
+         * @dev Create a list of strings with the commands necessary
+         * to compile Vyper contracts.
+         */
+        string[] memory cmds = new string[](3);
+        cmds[0] = "python3";
+        cmds[1] = "lib/utils/compile.py";
+        cmds[2] = string.concat(path, fileName, ".vy");
+
+        /**
+         * @dev Compile the Vyper contract and return the bytecode.
+         */
+        bytes memory bytecode = cheatCodes.ffi(cmds);
+
+        /**
+         * @dev Revert if the Vyper compilation failed or is a zero-length
+         * contract creation bytecode.
+         */
+        if (bytecode.length == 0) {
+            // solhint-disable-next-line no-console
+            console.log(
+                StdStyle.red(
+                    "Vyper compilation failed! Please ensure that you have a valid Vyper version installed."
+                )
+            );
+            revert CompilationFailed({emitter: self});
+        }
+
+        /**
+         * @dev Add the ABI-encoded constructor arguments to the
+         * deployment bytecode.
+         */
+        bytecode = abi.encodePacked(bytecode, args);
+
+        /**
+         * @dev Deploy the bytecode with the `CREATE` instruction.
+         */
+        deployedAddress = deploy({amount: 0, bytecode: bytecode});
+
+        /**
+         * @dev Check that the deployment was successful.
+         */
+        if (deployedAddress == address(0))
+            revert DeploymentFailed({emitter: self});
+    }
+
+    /**
+     * @dev Compiles a Vyper contract and returns the address that the contract
+     * was deployed to. If the deployment fails, an error is thrown.
+     * @notice Function overload of `deployContract` that allows the configuration
+     * of the target EVM version and the compiler optimisation mode.
+     * @param path The directory path of the Vyper contract.
+     * For example, the path of "utils" is "src/utils/".
+     * @param fileName The file name of the Vyper contract.
+     * For example, the file name for "ECDSA.vy" is "ECDSA".
+     * @param evmVersion The EVM version used for compilation.
+     * For example, the EVM version for the Cancun-Deneb hard fork is "cancun".
+     * You can retrieve all available Vyper EVM versions by invoking `vyper -h`.
+     * @param optimiserMode The optimisation mode used for compilation.
+     * For example, the default optimisation mode since Vyper `0.3.10` is "gas".
+     * You can retrieve all available Vyper optimisation modes by invoking `vyper -h`.
+     * @return deployedAddress The address that the contract was deployed to.
+     */
+    function deployContract(
+        string calldata path,
+        string calldata fileName,
+        string calldata evmVersion,
+        string calldata optimiserMode
+    ) public returns (address deployedAddress) {
+        /**
+         * @dev Create a list of strings with the commands necessary
+         * to compile Vyper contracts.
+         */
+        string[] memory cmds = new string[](7);
+        cmds[0] = "python3";
+        cmds[1] = "lib/utils/compile.py";
+        cmds[2] = string.concat(path, fileName, ".vy");
+        cmds[3] = "--evm-version";
+        cmds[4] = evmVersion;
+        cmds[5] = "--optimize";
+        cmds[6] = optimiserMode;
+
+        /**
+         * @dev Compile the Vyper contract and return the bytecode.
+         */
+        bytes memory bytecode = cheatCodes.ffi(cmds);
+
+        /**
+         * @dev Revert if the Vyper compilation failed or is a zero-length
+         * contract creation bytecode.
+         */
+        if (bytecode.length == 0) {
+            // solhint-disable-next-line no-console
+            console.log(
+                StdStyle.red(
+                    "Vyper compilation failed! Please ensure that you have a valid Vyper version installed."
+                )
+            );
+            revert CompilationFailed({emitter: self});
+        }
+
+        /**
+         * @dev Deploy the bytecode with the `CREATE` instruction.
+         */
+        deployedAddress = deploy({amount: 0, bytecode: bytecode});
+
+        /**
+         * @dev Check that the deployment was successful.
+         */
+        if (deployedAddress == address(0))
+            revert DeploymentFailed({emitter: self});
+    }
+
+    /**
+     * @dev Compiles a Vyper contract with constructor arguments and returns the
+     * address that the contract was deployed to. If the deployment fails, an error
+     * is thrown.
+     * @notice Function overload of `deployContract`, which allows the passing of
+     * any ABI-encoded constructor arguments and enables the configuration of the
+     * target EVM version and the compiler optimisation mode.
+     * @param path The directory path of the Vyper contract.
+     * For example, the path of "utils" is "src/utils/".
+     * @param fileName The file name of the Vyper contract.
+     * For example, the file name for "ECDSA.vy" is "ECDSA".
+     * @param args The ABI-encoded constructor arguments.
+     * @param evmVersion The EVM version used for compilation.
+     * For example, the EVM version for the Cancun-Deneb hard fork is "cancun".
+     * You can retrieve all available Vyper EVM versions by invoking `vyper -h`.
+     * @param optimiserMode The optimisation mode used for compilation.
+     * For example, the default optimisation mode since Vyper `0.3.10` is "gas".
+     * You can retrieve all available Vyper optimisation modes by invoking `vyper -h`.
+     * @return deployedAddress The address that the contract was deployed to.
+     */
+    function deployContract(
+        string calldata path,
+        string calldata fileName,
+        bytes calldata args,
+        string calldata evmVersion,
+        string calldata optimiserMode
+    ) public returns (address deployedAddress) {
+        /**
+         * @dev Create a list of strings with the commands necessary
+         * to compile Vyper contracts.
+         */
+        string[] memory cmds = new string[](7);
+        cmds[0] = "python3";
+        cmds[1] = "lib/utils/compile.py";
+        cmds[2] = string.concat(path, fileName, ".vy");
+        cmds[3] = "--evm-version";
+        cmds[4] = evmVersion;
+        cmds[5] = "--optimize";
+        cmds[6] = optimiserMode;
+
+        /**
+         * @dev Compile the Vyper contract and return the bytecode.
+         */
+        bytes memory bytecode = cheatCodes.ffi(cmds);
+
+        /**
+         * @dev Revert if the Vyper compilation failed or is a zero-length
+         * contract creation bytecode.
+         */
+        if (bytecode.length == 0) {
+            // solhint-disable-next-line no-console
+            console.log(
+                StdStyle.red(
+                    "Vyper compilation failed! Please ensure that you have a valid Vyper version installed."
+                )
+            );
+            revert CompilationFailed({emitter: self});
+        }
+
+        /**
+         * @dev Add the ABI-encoded constructor arguments to the
+         * deployment bytecode.
+         */
+        bytecode = abi.encodePacked(bytecode, args);
+
+        /**
+         * @dev Deploy the bytecode with the `CREATE` instruction.
+         */
+        deployedAddress = deploy({amount: 0, bytecode: bytecode});
+
+        /**
+         * @dev Check that the deployment was successful.
+         */
+        if (deployedAddress == address(0))
+            revert DeploymentFailed({emitter: self});
     }
 }

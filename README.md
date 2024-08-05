@@ -88,3 +88,8 @@ This repository is inspired by and uses code from the following projects:
 - [foundry-rs/forge-template](https://github.com/foundry-rs/forge-template)
 
 We are grateful to the authors and contributors of these projects for their valuable work and inspiration.
+
+## Debugging
+
+* The Vyper deployer originally used the `python` command. In this repository, it has been changed to `python3` for simplicity. If you encounter any issues running the tests, try switching back to python.
+* If `vyper --version` returns a version lower than 0.4.0, please refer to the [Vyper installation documentation](https://docs.vyperlang.org/en/latest/installing-vyper.html). (If you experience issues with pip, try running `python3 -m pip install vyper==0.4.0`)

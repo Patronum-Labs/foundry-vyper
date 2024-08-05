@@ -14,6 +14,7 @@ contract GreetingTest is Test {
         vyperDeployer = new VyperDeployer();
         greetingContract = IGreeting(
             vyperDeployer.deployContract(
+                "src/",
                 "Greeting",
                 abi.encode(INITIAL_GREETING)
             )

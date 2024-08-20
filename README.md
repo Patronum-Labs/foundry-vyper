@@ -1,6 +1,7 @@
-# <h1 align="center"> Foundry x Vyper Template </h1>
+# <h1 align="center"> Foundry x Vyper Template [![GitHub Repo stars](https://img.shields.io/github/stars/Patronum-Labs/foundry-vyper?style=social)](https://github.com/Patronum-Labs/foundry-vyper) </h1> 
 
-<p align="center"><b>Template repository for getting started quickly with Vyper using a Foundry project</b></p>
+<p align="center"><b>Template repository for getting started quickly with Vyper using a Foundry project.</b></p>
+<p align="center"><b>Star this project on GitHub to make it reach more developers.</b></p> 
 
 ## Setup
 
